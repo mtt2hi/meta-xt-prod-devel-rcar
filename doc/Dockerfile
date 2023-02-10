@@ -17,12 +17,24 @@ RUN apt-get update && apt-get install -y \
     x11proto-core-dev libx11-dev lib32z1-dev ccache libgl1-mesa-dev \
     libxml2-utils xsltproc unzip bc ninja-build \
     python3-pyelftools python3-crypto libncurses5 libssl-dev -y && \
-    apt-get install --reinstall -y ca-certificates && \
-    pip3 install pycryptodomex && \
+    apt-get install --reinstall -y ca-certificates  && \
+    pip3 install pycryptodomex west && \
     apt-get clean && rm -rf /tmp/* /var/tmp/*
 
+
 # Install repo
-RUN curl https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && chmod a+x /usr/bin/repo
+RUN curl -k https://storage.googleapis.com/git-repo-downloads/repo > /usr/bin/repo && chmod a+x /usr/bin/repo
+
+# Install recent cmake
+
+RUN wget https://apt.kitware.com/kitware-archive.sh && bash kitware-archive.sh && apt-get install cmake -y
+
+
+# Install libgit2
+RUN  wget https://github.com/libgit2/libgit2/archive/refs/tags/v1.5.0.tar.gz -O libgit2-1.5.0.tar.gz && \
+     tar xzf libgit2-1.5.0.tar.gz && cd libgit2-1.5.0 && \
+     cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr . && make && make install
+
 
 # Set the locale for fix this:
 # "Please use a locale setting which supports UTF-8 (such as LANG=en_US.UTF-8)."
@@ -52,5 +64,13 @@ USER $USER_NAME
 RUN mkdir -p /home/$USER_NAME/workspace && chown $USER_NAME:$USER_NAME /home/$USER_NAME/workspace
 ENV BUILD_DIR /home/$USER_NAME/workspace
 WORKDIR $BUILD_DIR
+
 RUN pip3 install --no-warn-script-location --user git+https://github.com/xen-troops/moulin
+
+# Install zephyr SDK
+
+RUN cd /home/$USER_NAME && wget -q https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.15.2/zephyr-sdk-0.15.2_linux-x86_64.tar.gz && \
+    wget -O - https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.15.2/sha256.sum | shasum --check --ignore-missing  && \
+    tar xf zephyr-sdk-0.15.2_linux-x86_64.tar.gz && cd zephyr-sdk-0.15.2 && ./setup.sh -h -c
+
 ENV PATH ~/.local/bin:$PATH
